@@ -1,4 +1,4 @@
-#  Enterprise Banking System (OOP Showcase)
+#  Enterprise Banking System 
 
 > A C# Console Application designed to demonstrate core Object-Oriented Programming (OOP) principles and clean code architecture.
 
