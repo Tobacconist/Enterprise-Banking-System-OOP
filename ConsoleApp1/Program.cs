@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 
 namespace EnterpriseBankingSystem
 {
@@ -32,19 +33,30 @@ namespace EnterpriseBankingSystem
             protected set { _balance = value; }
         }
 
+        private static readonly CultureInfo TrCulture = new CultureInfo("tr-TR");
+
+        protected static string FormatMoney(decimal amount) => amount.ToString("C2", TrCulture);
+
         protected BankAccount(string accountNumber, string owner, decimal initialBalance, ILogger logger)
         {
+            if (string.IsNullOrWhiteSpace(accountNumber))
+                throw new ArgumentException("Hesap numarası boş olamaz.", nameof(accountNumber));
+            if (string.IsNullOrWhiteSpace(owner))
+                throw new ArgumentException("Hesap sahibi boş olamaz.", nameof(owner));
+            if (initialBalance < 0)
+                throw new ArgumentOutOfRangeException(nameof(initialBalance), "Başlangıç bakiyesi negatif olamaz.");
+
             AccountNumber = accountNumber;
             Owner = owner;
             Balance = initialBalance;
-            _logger = logger;
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         public virtual void Deposit(decimal amount)
         {
             if (amount <= 0) throw new ArgumentException("Yatırılacak tutar 0'dan büyük olmalıdır.");
             Balance += amount;
-            _logger.Log($"{Owner} hesabına {amount:C2} yatırıldı. Yeni bakiye: {Balance:C2}");
+            _logger.Log($"{Owner} hesabına {FormatMoney(amount)} yatırıldı. Yeni bakiye: {FormatMoney(Balance)}");
         }
 
        
@@ -54,7 +66,7 @@ namespace EnterpriseBankingSystem
             if (amount > Balance) throw new InvalidOperationException("Yetersiz bakiye!");
 
             Balance -= amount;
-            _logger.Log($"{Owner} hesabından {amount:C2} çekildi. Kalan bakiye: {Balance:C2}");
+            _logger.Log($"{Owner} hesabından {FormatMoney(amount)} çekildi. Kalan bakiye: {FormatMoney(Balance)}");
         }
 
        
@@ -69,14 +81,22 @@ namespace EnterpriseBankingSystem
         public SavingsAccount(string accountNumber, string owner, decimal initialBalance, decimal interestRate, ILogger logger)
             : base(accountNumber, owner, initialBalance, logger)
         {
+            if (interestRate < 0)
+                throw new ArgumentOutOfRangeException(nameof(interestRate), "Faiz oranı negatif olamaz.");
             _interestRate = interestRate;
         }
 
-       
+
         public override void CalculateInterest()
         {
             decimal interest = Balance * _interestRate;
-            Deposit(interest); 
+            if (interest <= 0)
+            {
+                _logger.Log($"{Owner} hesabı için faiz getirisi oluşmadı.");
+                return;
+            }
+
+            Deposit(interest);
             _logger.Log($"{Owner} hesabı faiz kazandı.");
         }
     }
@@ -89,6 +109,8 @@ namespace EnterpriseBankingSystem
         public CheckingAccount(string accountNumber, string owner, decimal initialBalance, decimal overdraftLimit, ILogger logger)
             : base(accountNumber, owner, initialBalance, logger)
         {
+            if (overdraftLimit < 0)
+                throw new ArgumentOutOfRangeException(nameof(overdraftLimit), "Kredi limiti negatif olamaz.");
             _overdraftLimit = overdraftLimit;
         }
 
@@ -101,7 +123,7 @@ namespace EnterpriseBankingSystem
             if (amount > Balance + _overdraftLimit) throw new InvalidOperationException("Kredi limiti aşıldı! Çekim iptal edildi.");
 
             Balance -= amount;
-            _logger.Log($"{Owner} vadesiz hesabından {amount:C2} çekildi. Kalan bakiye: {Balance:C2}");
+            _logger.Log($"{Owner} vadesiz hesabından {FormatMoney(amount)} çekildi. Kalan bakiye: {FormatMoney(Balance)}");
         }
 
         public override void CalculateInterest()
@@ -114,6 +136,7 @@ namespace EnterpriseBankingSystem
     {
         static void Main(string[] args)
         {
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
             ILogger logger = new ConsoleLogger();
 
             try
