@@ -24,11 +24,18 @@
                 }
 
                 Console.WriteLine("\n--- Hata/Validasyon Testi ---");
-                accounts[1].Withdraw(3000m);
+                try
+                {
+                    accounts[1].Withdraw(3000m);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    Console.WriteLine($"Beklenen hata yakalandı: {ex.Message}");
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"\nSİSTEM HATASI KORUMASI DEVREDE: {ex.Message}");
+                Console.WriteLine($"\nBeklenmeyen hata:\n{ex}");
             }
 
             Console.WriteLine("\nProgramı kapatmak için bir tuşa basın...");

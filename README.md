@@ -1,34 +1,43 @@
-#  Enterprise Banking System 
+# Enterprise Banking System
 
-> A C# Console Application designed to demonstrate core Object-Oriented Programming (OOP) principles and clean code architecture.
+A small console application that models bank accounts with plain C# object-oriented design. It exists to show inheritance, polymorphism and defensive input handling without any framework around it. The user-facing output is in Turkish.
 
-This project simulates a backend banking engine where different account types (Savings and Checking) are managed through a unified interface. It was built specifically to showcase my understanding of software design patterns and the SOLID principles in a real-world scenario.
+## What it does
 
-##  OOP Principles Applied
+`Program.cs` creates two accounts, runs the same sequence of operations on both through the `BankAccount` base type, and then triggers a deliberate failure to show how an invalid operation is reported.
 
-* **Abstraction:** Utilized `abstract` classes and interfaces (`ILogger`) to decouple logic and define essential banking behaviors without exposing unnecessary details.
-* **Encapsulation:** Protected sensitive data like `Balance` using private fields and controlled accessors, ensuring data integrity across the system.
-* **Inheritance:** Implemented a hierarchical structure where `SavingsAccount` and `CheckingAccount` inherit shared logic from a base `BankAccount` class, reducing code duplication.
-* **Polymorphism:** Overrode base methods to implement account-specific behaviors, such as calculating interest for savings or managing overdraft limits for checking accounts.
+- `SavingsAccount` earns interest: `CalculateInterest` deposits `balance * rate` back into the account.
+- `CheckingAccount` has an overdraft limit: `Withdraw` is allowed as long as the amount does not exceed `balance + overdraft limit`. It does not earn interest.
+- `BankAccount` holds the shared state (account number, owner, balance) and the common `Deposit` / `Withdraw` rules.
 
-##  Key Features
+## Design notes
 
-* **Dynamic Account Management:** Supports multiple account types with unique business rules.
-* **Dependency Injection:** Implemented an `ILogger` interface to allow for flexible logging (e.g., to Console or potentially to a file/database) without changing core logic.
-* **Robust Validation:** Includes comprehensive error handling for invalid transactions like overdrafts or negative deposits.
-* **Transaction Logging:** Real-time logging of all financial activities to ensure transparency.
+- **Validation lives in constructors and base-class helpers.** Account number, owner, initial balance, interest rate and overdraft limit are checked on creation, so an account can never exist in an invalid state. Amount checks for deposits and withdrawals share a single helper in `BankAccount`.
+- **Balance is only writable from inside the hierarchy.** `Balance` has a `protected set`, so callers have to go through `Deposit` and `Withdraw`, which enforce the rules and write the log line.
+- **`decimal` for money.** No floating point rounding surprises.
+- **Currency formatting is pinned to `tr-TR`.** Amounts are formatted the same way on every machine instead of following the current OS culture. The console output encoding is set to UTF-8 so the lira sign renders correctly.
+- **Zero interest is not an error.** An empty savings account logs that no interest was earned instead of failing on a zero-amount deposit.
+- **Expected vs. unexpected errors.** The demo catches `InvalidOperationException` (insufficient funds, overdraft exceeded) separately. Anything else falls through to an outer handler that prints the full exception including the stack trace.
+- **Logging goes through `ILogger`.** `ConsoleLogger` is the only implementation and is injected through the constructor. This is the only abstraction in the project, kept because the accounts should not depend on `Console` directly.
 
-##  Tech Stack
+## Project layout
 
-* **Language:** C#
-* **Framework:** .NET Console
-* **Concepts:** OOP, SOLID Principles, Dependency Injection
+```
+ConsoleApp1/
+  Program.cs           entry point and demo scenario
+  BankAccount.cs       abstract base class, shared rules
+  SavingsAccount.cs    interest-bearing account
+  CheckingAccount.cs   account with an overdraft limit
+  ILogger.cs           logging interface
+  ConsoleLogger.cs     console implementation
+```
 
-##  How to Run
+## Running locally
 
-1. Clone this repository.
-2. Open the solution file in **Visual Studio**.
-3. Press `F5` to run the console application.
-4. Observe the transaction logs in the console to see the OOP logic in action.
+Requires the .NET 10 SDK.
 
---
+```
+dotnet run --project ConsoleApp1
+```
+
+The program prints the log lines for each operation and waits for Enter before closing.
